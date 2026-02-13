@@ -1,6 +1,6 @@
 # Zed C# & Razor
 
-This repository is a fork of the [official C# extension](https://github.com/zed-extensions/csharp) for Zed. It's pretty experimental, and I'm fully aware that some things are implemented a bit... let's say *pragmatically*. I thought sharing it wouldn't hurt though. :)
+This repository is a fork of the [official C# extension](https://github.com/zed-extensions/csharp) for Zed. It's pretty experimental, and I'm fully aware that some things are implemented a bit... let's say *pragmatically*. But I thought sharing it wouldn't hurt. :)
 
 ## Features
 
