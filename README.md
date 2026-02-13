@@ -12,7 +12,7 @@ Integrates the great work from [zed-netcoredbg](https://github.com/qwadrox/zed-n
 
 This even includes debugging support for tests. And the tests can even be started via a little ">" icon next to the test name! Crazy, right?
 
-For normal build tasks, the extension tries it's best to automatically turn them into debug tasks. If something is missing, you can always add it manually. See [configuration](https://github.com/qwadrox/zed-netcoredbg?tab=readme-ov-file#configuration).
+For normal build tasks, the extension tries it's best to automatically turn them into debug tasks. If something is missing, you can always add it manually. See [configuration](https://github.com/qwadrox/zed-netcoredbg?tab=readme-ov-file#configuration). Or just run the project manually, and use zed's attach interface.
 
 ### Razor Support
 
@@ -47,7 +47,7 @@ The original extension did not work when not connected to the internet. This has
 
 First, clone this repositry and install it as a "Dev Extension" in Zed.
 ```bash
-git clone 
+git clone https://github.com/kevin-mueller/zed-csharp
 ```
 
 I'm using the preview version of Zed, but you don't have to.
@@ -102,6 +102,7 @@ The extension requires multiple binaries to work properly. Managing them is a bi
 2. The `Microsoft.VisualStudioCode.RazorExtension.dll`. This is required to provide razor LSP functionality. It is currently fetched by cloning the [source repo](https://github.com/dotnet/razor) and compiling the `Microsoft.VisualStudioCode.RazorExtension.csproj`. If someone knows of a binary distribution of this, please let me know.
 3. The `Microsoft.CodeAnalysis.Razor.Compiler.dll` and `Microsoft.NET.Sdk.Razor.DesignTime.targets`. These files are also required to provide razor LSP support. They are shipped via the dotnet sdk and are currently read from there. The latest sdk version is detemined by running `dotnet --list-sdks` and parsing the output. *yikes*.
 4. The `vscode-html-language-server` executable. It is used by the html-in-razor, which is required to get the html lsp working inside of .razor files. It is currently provided the exact same way the official, bundled html extension does it. Which is via npm.
+5. The "Open Project" command is currently hard-coded to use the `zed-preview` executable. If you don't use the preview, you could add an alias, or simply change it in the tasks.json file in the csharp language folder.
 
 **Build Context Resolution**
 
@@ -132,6 +133,6 @@ This is suboptimal, because the two will drift appart sooner or later.
 
 ## Development / Contribution
 
-Please, feel free to contribute to this extension. My knowledge of rust and the zed internals is very limited.
+Please, feel free to contribute to this extension. My knowledge of rust and the zed internals is very limited, so some help would be much appreciated.
 
 To develop this extension, see the [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions) section of the Zed docs.
