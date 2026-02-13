@@ -12,6 +12,8 @@ Integrates the great work from [zed-netcoredbg](https://github.com/qwadrox/zed-n
 
 This even includes debugging support for tests. And the tests can even be started via a little ">" icon next to the test name! Crazy, right?
 
+For normal build tasks, the extension tries it's best to automatically turn them into debug tasks. If something is missing, you can always add it manually. See [configuration](https://github.com/qwadrox/zed-netcoredbg?tab=readme-ov-file#configuration).
+
 ### Razor Support
 
 Adds syntax highlighting and a LSP for the razor language. Built on a custom fork of [tree-sitter-razor](https://github.com/kevin-mueller/tree-sitter-razor) and the official roslyn lsp. Razor support is further enhanced by mixing in the html lsp for .razor files.
@@ -82,7 +84,8 @@ I'm using the preview version of Zed, but you don't have to.
 This extension is far from perfect. Here are a couple caveats:
 1. Windows support! I never tested this on Windows, only Linux and MacOS. I think the biggest problem are the custom bash commands this extension relies on. Adding Windows support should be doable though.
 2. The razor syntax highlighting is still a bit wonky. Especially the html syntax injection. My custom [tree-sitter fork](https://github.com/kevin-mueller/tree-sitter-razor) does solve some problems from the original one, but it should be mentioned that I have zero knowledge about tree sitter syntax. Improvements here would be very welcome!
-2. The official Roslyn LSP is very new. Occasionally, the server crashes and has to be restarted. That said, it works pretty well for large code bases (~100 Projects) and much more reliably than the other LSPs I've tried.
+3. The official Roslyn LSP is very new. Occasionally, the server crashes and has to be restarted. That said, it works pretty well for large code bases (~100 Projects) and much more reliably than the other LSPs I've tried.
+4. LaunchProfiles are not yet supported. I'm not sure if it's possible with the current state of the zed extension framework. For now you'll have to define project tasks manually. For how to do that via debugging, check the original [zed-netcoredbg readme](https://github.com/qwadrox/zed-netcoredbg?tab=readme-ov-file#configuration).
 
 ---
 
