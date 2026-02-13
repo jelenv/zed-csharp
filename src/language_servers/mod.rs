@@ -1,6 +1,5 @@
-pub mod omnisharp;
-pub mod roslyn;
-pub mod util;
+pub mod html;
+pub mod roslyn_official;
 
-pub use omnisharp::*;
-pub use roslyn::*;
+pub use html::*;
+pub use roslyn_official::*;

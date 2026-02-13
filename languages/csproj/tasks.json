@@ -1,0 +1,55 @@
+[
+  {
+    "label": "Build Current Project",
+    "command": "dotnet build",
+    "args": [
+      "$ZED_FILE"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Run Current Project",
+    "command": "dotnet",
+    "args": [
+      "run",
+      "--project",
+      "$ZED_FILE"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "env": {
+      "DOTNET_FILE": "$ZED_FILE"
+    },
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Test Current Project",
+    "command": "dotnet",
+    "args": [
+      "test",
+      "$ZED_FILE"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "env": {
+      "DOTNET_FILE": "$ZED_FILE"
+    },
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Build Solution",
+    "command": "dotnet build",
+    "args": [
+      "$ZED_WORKTREE_ROOT"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "show_command": false,
+    "show_summary": false
+  }
+]

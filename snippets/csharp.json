@@ -1,0 +1,26 @@
+{
+  "C# Class": {
+    "prefix": "cls",
+    "body": [
+      "namespace ${1:Namespace}",
+      "",
+      "public class ${2:ClassName}",
+      "{",
+      "    $0",
+      "}",
+    ],
+    "description": "New C# Class"
+  },
+  "C# Interface": {
+    "prefix": "inf",
+    "body": [
+      "namespace ${1:Namespace}",
+      "",
+      "public interface ${2:InterfaceName}",
+      "{",
+      "    $0",
+      "}",
+    ],
+    "description": "New C# Interface"
+  }
+}
