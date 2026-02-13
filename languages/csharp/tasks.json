@@ -49,7 +49,7 @@
     "show_summary": false
   },
   {
-    "label": "Run All Tests",
+    "label": "Run All Tests in Root Directory",
     "command": "dotnet test -v m",
     "args": [
       "$ZED_WORKTREE_ROOT"
