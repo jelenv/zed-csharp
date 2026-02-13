@@ -143,7 +143,7 @@ impl RoslynOfficial {
     fn install_or_update_razor(
         lsp_settings: LspSettings,
         worktree: &zed::Worktree,
-        _language_server_id: &LanguageServerId,
+        language_server_id: &LanguageServerId,
     ) -> Result<Option<Vec<String>>, String> {
         let lsp_user_settings = match lsp_settings.settings {
             Some(settings) => settings,
@@ -172,7 +172,7 @@ impl RoslynOfficial {
 
         if directory_exists.status.unwrap() == 0 {
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::CheckingForUpdate,
             );
             // in this case we can reset the git repository and pull the latest changes
@@ -190,7 +190,7 @@ impl RoslynOfficial {
             }
 
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
             );
             let razor_root_git_pull = zed_extension_api::process::Command::new("git")
@@ -199,7 +199,7 @@ impl RoslynOfficial {
                 .arg("pull")
                 .output()?;
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::None,
             );
 
@@ -209,7 +209,7 @@ impl RoslynOfficial {
         } else {
             // in this case we need to clone the repository
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
             );
 
@@ -220,7 +220,7 @@ impl RoslynOfficial {
                 .output()?;
 
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::None,
             );
 
@@ -230,7 +230,7 @@ impl RoslynOfficial {
         }
 
         zed_extension_api::set_language_server_installation_status(
-            _language_server_id,
+            language_server_id,
             &zed::LanguageServerInstallationStatus::Downloading,
         );
         let dotnet_build = zed_extension_api::process::Command::new("dotnet")
@@ -243,7 +243,7 @@ impl RoslynOfficial {
             .envs(env_vars)
             .output()?;
         zed_extension_api::set_language_server_installation_status(
-            _language_server_id,
+            language_server_id,
             &zed::LanguageServerInstallationStatus::None,
         );
 
