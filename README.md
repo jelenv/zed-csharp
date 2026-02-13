@@ -58,7 +58,7 @@ I'm using the preview version of Zed, but you don't have to.
   "lsp": {
     "roslyn-official": {
       "settings": {
-        // this is required for the razor lsp extensions
+        // this is required for the razor lsp extensions. If you omit it, there will be no razor lsp support!
         // it will be downloaded automatically. You just have to provide a path
         "razor_source_repository_root": "/some/place/nice/razor" 
       }
@@ -86,6 +86,7 @@ This extension is far from perfect. Here are a couple caveats:
 2. The razor syntax highlighting is still a bit wonky. Especially the html syntax injection. My custom [tree-sitter fork](https://github.com/kevin-mueller/tree-sitter-razor) does solve some problems from the original one, but it should be mentioned that I have zero knowledge about tree sitter syntax. Improvements here would be very welcome!
 3. The official Roslyn LSP is very new. Occasionally, the server crashes and has to be restarted. That said, it works pretty well for large code bases (~100 Projects) and much more reliably than the other LSPs I've tried.
 4. LaunchProfiles are not yet supported. I'm not sure if it's possible with the current state of the zed extension framework. For now you'll have to define project tasks manually. For how to do that via debugging, check the original [zed-netcoredbg readme](https://github.com/qwadrox/zed-netcoredbg?tab=readme-ov-file#configuration).
+
 
 ---
 

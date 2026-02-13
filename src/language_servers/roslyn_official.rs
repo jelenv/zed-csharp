@@ -11,7 +11,7 @@ impl RoslynOfficial {
 
     pub fn language_server_cmd(
         &mut self,
-        _language_server_id: &LanguageServerId,
+        language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
         let Some(lsp_settings) = LspSettings::for_worktree(Self::LANGUAGE_SERVER_ID, worktree).ok()
@@ -19,167 +19,21 @@ impl RoslynOfficial {
             return Err(format!("Unable to load settings"));
         };
 
-        let binary_args = lsp_settings
-            .binary
-            .as_ref()
-            .and_then(|binary_settings| binary_settings.arguments.clone());
-
         // Build arguments list
-        let mut args = vec!["--stdio".to_string(), "--autoLoadProjects".to_string()];
+        let base_args = vec!["--stdio".to_string(), "--autoLoadProjects".to_string()];
 
-        let no_settings_error_message = format!(
-            r#"
-            No settings configured for roslyn-official.
-            Please specify the razor_source_repository_root in your settings.json:
-            "lsp": {{
-              "roslyn-official": {{
-                "settings": {{
-                  "razor_source_repository_root": "/some/place/nice/razor"
-                }}
-              }}
-            }},
-            "#
-        );
+        let razor_args = Self::install_or_update_razor(lsp_settings, worktree, language_server_id)?;
 
-        let lsp_user_settings = match lsp_settings.settings {
-            Some(settings) => settings,
-            None => {
-                return Err(no_settings_error_message);
-            }
+        let final_args = match razor_args {
+            Some(x) => base_args.into_iter().chain(x).collect(),
+            None => base_args,
         };
-
-        let razor_root = lsp_user_settings["razor_source_repository_root"]
-            .as_str()
-            .map(|s| s.to_string());
-
-        let razor_root_unwrapped = &match razor_root {
-            None => return Err(no_settings_error_message),
-            Some(x) => x,
-        };
-
-        let (sdk_path, sdk_version) = Self::find_dotnet_sdk_path(worktree)?;
-
-        let env_vars = worktree.shell_env();
-
-        let directory_exists = zed_extension_api::Command::new("test")
-            .arg("-d")
-            .arg(razor_root_unwrapped)
-            .output()?;
-
-        if directory_exists.status.unwrap() == 0 {
-            zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
-                &zed::LanguageServerInstallationStatus::CheckingForUpdate,
-            );
-            // in this case we can reset the git repository and pull the latest changes
-            let razor_root_reset = zed_extension_api::process::Command::new("git")
-                .arg("-C")
-                .arg(razor_root_unwrapped)
-                .arg("reset")
-                .arg("--hard")
-                .output()?;
-
-            if razor_root_reset.status.is_none() || razor_root_reset.status.unwrap() != 0 {
-                return Err(format!(
-                    "Unable to reset razor git repository. Git installed?"
-                ));
-            }
-
-            zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
-            );
-            let razor_root_git_pull = zed_extension_api::process::Command::new("git")
-                .arg("-C")
-                .arg(razor_root_unwrapped)
-                .arg("pull")
-                .output()?;
-            zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
-                &zed::LanguageServerInstallationStatus::None,
-            );
-
-            if razor_root_git_pull.status.is_none() || razor_root_git_pull.status.unwrap() != 0 {
-                println!("Unable to pull latest changes in razor repository. Offline?");
-            }
-        } else {
-            // in this case we need to clone the repository
-            zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
-            );
-
-            let razor_root_clone = zed_extension_api::process::Command::new("git")
-                .arg("clone")
-                .arg("https://github.com/dotnet/razor")
-                .arg(razor_root_unwrapped)
-                .output()?;
-
-            zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
-                &zed::LanguageServerInstallationStatus::None,
-            );
-
-            if razor_root_clone.status.is_none() || razor_root_clone.status.unwrap() != 0 {
-                return Err(format!("Unable to clone razor git repository. For this initial setup step, an internet connection is required."));
-            }
-        }
-
-        let dotnet_build = zed_extension_api::process::Command::new("dotnet")
-            .arg("build")
-            .arg(format!(
-                "{}/src/Razor/src/Microsoft.VisualStudioCode.RazorExtension/Microsoft.VisualStudioCode.RazorExtension.csproj",
-                razor_root_unwrapped
-            ))
-            .arg("--configuration").arg("Release")
-            .envs(env_vars)
-            .output()?;
-
-        if dotnet_build.status.is_none() || dotnet_build.status.unwrap() != 0 {
-            return Err(format!("Unable to build razor extension"));
-        }
-
-        // if someone knows a better way to get this dll, i'm all ears
-        let sdk_version_short = format!(
-            "net{}",
-            sdk_version.split('.').take(2).collect::<Vec<_>>().join(".")
-        );
-        let razor_vscode_extension_path = format!("{}/artifacts/bin/Microsoft.VisualStudioCode.RazorExtension/Release/{}/Microsoft.VisualStudioCode.RazorExtension.dll", razor_root_unwrapped, sdk_version_short);
-
-        args.push("--extension".to_string());
-        args.push(razor_vscode_extension_path);
-
-        let razor_dll = Self::find_razor_compiler_dll(&sdk_path);
-        let razor_targets = Self::find_razor_design_time_targets(&sdk_path);
-
-        // Add Razor source generator argument
-        args.push("--razorSourceGenerator".to_string());
-        args.push(razor_dll);
-
-        // Add Razor design time path argument
-        args.push("--razorDesignTimePath".to_string());
-        args.push(razor_targets);
-
-        // Use custom args if provided, otherwise use our built args
-        let final_args = binary_args.unwrap_or(args);
-
-        // Check if user provided a custom path
-        if let Some(path) = lsp_settings
-            .binary
-            .and_then(|binary_settings| binary_settings.path)
-        {
-            return Ok(zed::Command {
-                command: path,
-                args: final_args,
-                env: Default::default(),
-            });
-        }
 
         // Try to find roslyn-language-server in PATH
         if let Some(path) = worktree.which("roslyn-language-server") {
             // try to update
             zed_extension_api::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
             );
             zed_extension_api::process::Command::new("dotnet")
@@ -198,7 +52,7 @@ impl RoslynOfficial {
         } else {
             // download the tool
             zed::set_language_server_installation_status(
-                _language_server_id,
+                language_server_id,
                 &zed_extension_api::LanguageServerInstallationStatus::Downloading,
             );
             zed_extension_api::process::Command::new("dotnet")
@@ -284,6 +138,143 @@ impl RoslynOfficial {
             .and_then(|lsp_settings| lsp_settings.settings);
 
         Ok(settings.map(Self::transform_settings_for_roslyn))
+    }
+
+    fn install_or_update_razor(
+        lsp_settings: LspSettings,
+        worktree: &zed::Worktree,
+        _language_server_id: &LanguageServerId,
+    ) -> Result<Option<Vec<String>>, String> {
+        let lsp_user_settings = match lsp_settings.settings {
+            Some(settings) => settings,
+            None => {
+                return Ok(None); // no settings is also fine => no razor support
+            }
+        };
+
+        let razor_root = lsp_user_settings["razor_source_repository_root"]
+            .as_str()
+            .map(|s| s.to_string());
+
+        let razor_root_unwrapped = &match razor_root {
+            None => return Ok(None), // no settings is also fine => no razor support
+            Some(x) => x,
+        };
+
+        let (sdk_path, sdk_version) = Self::find_dotnet_sdk_path(worktree)?;
+
+        let env_vars = worktree.shell_env();
+
+        let directory_exists = zed_extension_api::Command::new("test")
+            .arg("-d")
+            .arg(razor_root_unwrapped)
+            .output()?;
+
+        if directory_exists.status.unwrap() == 0 {
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::CheckingForUpdate,
+            );
+            // in this case we can reset the git repository and pull the latest changes
+            let razor_root_reset = zed_extension_api::process::Command::new("git")
+                .arg("-C")
+                .arg(razor_root_unwrapped)
+                .arg("reset")
+                .arg("--hard")
+                .output()?;
+
+            if razor_root_reset.status.is_none() || razor_root_reset.status.unwrap() != 0 {
+                return Err(format!(
+                    "Unable to reset razor git repository. Git installed?"
+                ));
+            }
+
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
+            let razor_root_git_pull = zed_extension_api::process::Command::new("git")
+                .arg("-C")
+                .arg(razor_root_unwrapped)
+                .arg("pull")
+                .output()?;
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
+
+            if razor_root_git_pull.status.is_none() || razor_root_git_pull.status.unwrap() != 0 {
+                println!("Unable to pull latest changes in razor repository. Offline?");
+            }
+        } else {
+            // in this case we need to clone the repository
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
+
+            let razor_root_clone = zed_extension_api::process::Command::new("git")
+                .arg("clone")
+                .arg("https://github.com/dotnet/razor")
+                .arg(razor_root_unwrapped)
+                .output()?;
+
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
+
+            if razor_root_clone.status.is_none() || razor_root_clone.status.unwrap() != 0 {
+                return Err(format!("Unable to clone razor git repository. For this initial setup step, an internet connection is required."));
+            }
+        }
+
+        zed_extension_api::set_language_server_installation_status(
+            _language_server_id,
+            &zed::LanguageServerInstallationStatus::Downloading,
+        );
+        let dotnet_build = zed_extension_api::process::Command::new("dotnet")
+            .arg("build")
+            .arg(format!(
+                "{}/src/Razor/src/Microsoft.VisualStudioCode.RazorExtension/Microsoft.VisualStudioCode.RazorExtension.csproj",
+                razor_root_unwrapped
+            ))
+            .arg("--configuration").arg("Release")
+            .envs(env_vars)
+            .output()?;
+        zed_extension_api::set_language_server_installation_status(
+            _language_server_id,
+            &zed::LanguageServerInstallationStatus::None,
+        );
+
+        if dotnet_build.status.is_none() || dotnet_build.status.unwrap() != 0 {
+            return Err(format!("Unable to build razor extension"));
+        }
+
+        // if someone knows a better way to get this dll, i'm all ears
+        let sdk_version_short = format!(
+            "net{}",
+            sdk_version.split('.').take(2).collect::<Vec<_>>().join(".")
+        );
+        let razor_vscode_extension_path = format!("{}/artifacts/bin/Microsoft.VisualStudioCode.RazorExtension/Release/{}/Microsoft.VisualStudioCode.RazorExtension.dll", razor_root_unwrapped, sdk_version_short);
+
+        let mut args = vec![];
+
+        args.push("--extension".to_string());
+        args.push(razor_vscode_extension_path);
+
+        let razor_dll = Self::find_razor_compiler_dll(&sdk_path);
+        let razor_targets = Self::find_razor_design_time_targets(&sdk_path);
+
+        // Add Razor source generator argument
+        args.push("--razorSourceGenerator".to_string());
+        args.push(razor_dll);
+
+        // Add Razor design time path argument
+        args.push("--razorDesignTimePath".to_string());
+        args.push(razor_targets);
+
+        return Ok(Some(args));
     }
 
     fn transform_settings_for_roslyn(settings: zed::serde_json::Value) -> zed::serde_json::Value {
