@@ -296,7 +296,7 @@ impl zed::Extension for CsharpExtension {
                 .arg("Debug")
                 .output()?;
 
-            let dll_path = find_dll_from_csproj(&csproj)?;
+            let dll_path = &find_dll_from_csproj(&csproj)?;
 
             let mut args: Vec<String> = vec![];
 
@@ -313,10 +313,16 @@ impl zed::Extension for CsharpExtension {
                 args.push(format!("*.{}", test_method_name.unwrap()));
             }
 
+            let last_slash_index = dll_path
+                .rfind('/')
+                .ok_or_else(|| "Failed to find last slash in dll path".to_string())?;
+
+            let cwd = &dll_path[..last_slash_index];
+
             return Ok(DebugRequest::Launch(zed::LaunchRequest {
-                program: dll_path,
+                program: dll_path.to_string(),
                 args: args,
-                cwd: _build_task.cwd,
+                cwd: Some(cwd.to_string()),
                 envs: _build_task.env,
             }));
         }
