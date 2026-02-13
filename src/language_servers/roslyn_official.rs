@@ -94,6 +94,10 @@ impl RoslynOfficial {
                 .arg(razor_root_unwrapped)
                 .arg("pull")
                 .output()?;
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
 
             if razor_root_git_pull.status.is_none() || razor_root_git_pull.status.unwrap() != 0 {
                 println!("Unable to pull latest changes in razor repository. Offline?");
@@ -110,6 +114,11 @@ impl RoslynOfficial {
                 .arg("https://github.com/dotnet/razor")
                 .arg(razor_root_unwrapped)
                 .output()?;
+
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
 
             if razor_root_clone.status.is_none() || razor_root_clone.status.unwrap() != 0 {
                 return Err(format!("Unable to clone razor git repository. For this initial setup step, an internet connection is required."));
@@ -249,7 +258,7 @@ impl RoslynOfficial {
             .unwrap());
     }
 
-    /// Find the Razor Compiler DLL in the given SDK path
+    // Find the Razor Compiler DLL in the given SDK path
     fn find_razor_compiler_dll(sdk_path: &str) -> String {
         let dll_path = format!(
             "{}/Sdks/Microsoft.NET.Sdk.Razor/source-generators/Microsoft.CodeAnalysis.Razor.Compiler.dll",
@@ -259,7 +268,7 @@ impl RoslynOfficial {
         return dll_path;
     }
 
-    /// Find the Razor Design Time Targets file in the given SDK path
+    // Find the Razor Design Time Targets file in the given SDK path
     fn find_razor_design_time_targets(sdk_path: &str) -> String {
         return format!(
             "{}/Sdks/Microsoft.NET.Sdk.Razor/targets/Microsoft.NET.Sdk.Razor.DesignTime.targets",

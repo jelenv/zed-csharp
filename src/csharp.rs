@@ -1,11 +1,11 @@
-mod binary_manager;
 mod language_servers;
+mod netcoredbg_binary_manager;
 mod simple_temp_dir;
 
 use std::collections::HashMap;
 
-use binary_manager::BinaryManager;
 use language_servers::{HtmlLanguageServer, RoslynOfficial};
+use netcoredbg_binary_manager::NetCoreDbgBinaryManager;
 use serde::{Deserialize, Serialize};
 use zed_extension_api::{
     self as zed,
@@ -17,7 +17,7 @@ use zed_extension_api::{
 struct CsharpExtension {
     roslyn_official: Option<RoslynOfficial>,
     html: Option<HtmlLanguageServer>,
-    binary_manager: BinaryManager,
+    binary_manager: NetCoreDbgBinaryManager,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -60,7 +60,7 @@ impl zed::Extension for CsharpExtension {
         Self {
             roslyn_official: None,
             html: None,
-            binary_manager: BinaryManager::new(),
+            binary_manager: NetCoreDbgBinaryManager::new(),
         }
     }
 
@@ -296,15 +296,7 @@ impl zed::Extension for CsharpExtension {
                 .arg("Debug")
                 .output()?;
 
-            let dll = match find_dll_from_csproj(&csproj) {
-                Some(x) => x,
-                None => {
-                    return Err(format!(
-                        "Failed to locate dll file from csproj file {}",
-                        csproj
-                    ))
-                }
-            };
+            let dll_path = find_dll_from_csproj(&csproj)?;
 
             let mut args: Vec<String> = vec![];
 
@@ -322,7 +314,7 @@ impl zed::Extension for CsharpExtension {
             }
 
             return Ok(DebugRequest::Launch(zed::LaunchRequest {
-                program: dll,
+                program: dll_path,
                 args: args,
                 cwd: _build_task.cwd,
                 envs: _build_task.env,
@@ -402,36 +394,73 @@ fn find_csproj(start_path: &str) -> Option<String> {
     None // Not found
 }
 
-fn find_dll_from_csproj(start_path: &str) -> Option<String> {
-    let binary_name = start_path.split("/").last()?.strip_suffix(".csproj")?;
+fn find_dll_from_csproj(csproj_path: &str) -> Result<String, String> {
+    let csproj_content_output = zed::Command::new("cat")
+        .arg(csproj_path)
+        .output()
+        .map_err(|e| e.to_string())?;
 
-    let folder_path = if let Some(last_slash) = start_path.rfind('/') {
-        if last_slash == 0 {
-            return None; // Reached root
+    let csproj_content = String::from_utf8_lossy(&csproj_content_output.stdout)
+        .trim()
+        .to_string();
+
+    let target_framework = match parse_target_framework(&csproj_content) {
+        Some(it) => it,
+        None => {
+            return Err(format!(
+                "Unable to parse target framework from csproj content {}",
+                csproj_content
+            ))
         }
-        format!("{}/bin", &start_path[..last_slash])
-    } else {
-        return None;
     };
 
-    // Try to find .dll in the bin directory
-    // TODO: we should parse the targetframework of the csproj first (grep it?)
-    let result = zed_extension_api::process::Command::new("find")
-        .arg(&folder_path)
-        .arg("-name")
-        .arg(format!("{}.dll", binary_name))
-        .arg("-print")
-        .arg("-quit")
-        .output()
-        .ok()?;
+    let binary_name = csproj_path
+        .split("/")
+        .last()
+        .ok_or("Could not extract binary name from path")?
+        .strip_suffix(".csproj")
+        .ok_or("Path does not end with .csproj")?;
 
-    let output = String::from_utf8_lossy(&result.stdout).trim().to_string();
-    if !output.is_empty() {
-        // Found it!
-        return Some(output);
+    let dll_path = if let Some(last_slash) = csproj_path.rfind('/') {
+        if last_slash == 0 {
+            return Err("Unable to parse sdk output".into()); // Reached root
+        }
+        format!(
+            "{}/bin/Debug/{}/{}.dll",
+            &csproj_path[..last_slash],
+            target_framework,
+            binary_name
+        )
+    } else {
+        return Err(format!(
+            "Unable to find last slash in csproj path {}",
+            csproj_path
+        ));
+    };
+
+    // verify if file_path exists
+    if file_exists(&dll_path)? {
+        return Ok(dll_path);
     }
 
-    None // Not found
+    return Err("Unable to find dll".into());
+}
+
+fn file_exists(path: &str) -> Result<bool, String> {
+    let status = zed::Command::new("test").arg(path).output()?.status;
+
+    return match status {
+        Some(s) => Ok(s == 0),
+        None => Err(format!("File not found at {}", path)),
+    };
+}
+
+fn parse_target_framework(csproj_content: &str) -> Option<String> {
+    // Look for <TargetFramework>net6.0</TargetFramework>
+    let start = csproj_content.find("<TargetFramework>")?;
+    let start = start + "<TargetFramework>".len();
+    let end = csproj_content[start..].find("</TargetFramework>")?;
+    Some(csproj_content[start..start + end].to_string())
 }
 
 fn env_value(env: &Vec<(String, String)>, key: &str) -> Option<String> {

@@ -112,6 +112,11 @@ The extension works around this by building the required binaries via a custom c
 
 Another way would be to simply build the entire solution during `dap_locator_create_scenario`, because we do know the root folder. But I think that would be annoying if you, for example, want to debug a single test in a project that is not related to another project, which might still contain build errors.
 
+**File System Interactions**
+
+For some reason, I didn't manage to make `std::fs` commands work in the two debugger methods. My gut feeling tells me that this is related to the sandboxing of extensions, but I'm not sure.
+The workaround for this is to just use basic shell commands like `cat`, `find`, or `test`. Suboptimal, because they only work on unix based systems.
+
 **Razor HTML Injection**
 
 Razor is baiscally a mix of C# + HTML. To get both the HTML and Roslyn LSP working in a .razor file, the extension has to provide a custom HTML LSP. We sadly cannot reference another extension for this.

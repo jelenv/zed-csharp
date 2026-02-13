@@ -58,6 +58,11 @@ args = ["**"]
 
 [[capabilities]]
 kind = "process:exec"
+command = "cat"
+args = ["**"]
+
+[[capabilities]]
+kind = "process:exec"
 command = "test"
 args = ["**"]
 

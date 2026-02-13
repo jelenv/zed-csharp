@@ -12,18 +12,18 @@ pub struct AdapterVersion {
     pub download_url: String,
 }
 
-pub struct BinaryManager {
+pub struct NetCoreDbgBinaryManager {
     /// Cached path to the netcoredbg binary - set once and reused
     cached_binary_path: OnceLock<String>,
 }
 
-impl Default for BinaryManager {
+impl Default for NetCoreDbgBinaryManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BinaryManager {
+impl NetCoreDbgBinaryManager {
     const GITHUB_OWNER: &str = "qwadrox";
     const GITHUB_REPO: &str = "netcoredbg";
 

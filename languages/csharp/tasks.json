@@ -1,9 +1,12 @@
 [
   {
     "label": "Open Project File",
-    "command": "zed $(d=\"$ZED_FILE\"; while [[ \"$d\" != \"/\" ]]; do c=$(find \"$d\" -maxdepth 1 -name \"*.csproj\" -print -quit 2>/dev/null); [[ -n \"$c\" ]] && echo \"$c\" && break; d=$(dirname \"$d\"); done)",
+    "command": "zed-preview",
+    "args": [
+      "$(d=\"$ZED_FILE\"; while [[ \"$d\" != \"/\" ]]; do c=$(find \"$d\" -maxdepth 1 -name \"*.csproj\" -print -quit 2>/dev/null); [[ -n \"$c\" ]] && echo \"$c\" && break; d=$(dirname \"$d\"); done)"
+    ],
     "reveal": "never",
-    "hide": "always",
+    "hide": "never",
     "show_command": false,
     "show_summary": false
   },
