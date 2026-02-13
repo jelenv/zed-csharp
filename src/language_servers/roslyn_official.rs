@@ -227,21 +227,24 @@ impl RoslynOfficial {
 
         // Parse the output to get the latest SDK version
         // Format: "10.0.100 [/home/user/.dotnet/sdk]"
-        let latest_sdk = stdout
-            .lines()
-            .filter_map(|line| {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let version = parts[0];
-                    let path = parts[1].trim_matches(|c| c == '[' || c == ']');
-                    Some((version.to_string(), path.to_string()))
-                } else {
-                    None
-                }
-            })
-            .last();
+        let last_line = stdout.lines().last();
+        if last_line.is_none() {
+            return Err(format!("Unable to parse dotnet sdk info output {}", stdout));
+        }
 
-        return Ok(latest_sdk
+        let parts: Vec<&str> = last_line.unwrap().split_whitespace().collect();
+        let sdk_version = if parts.len() >= 2 {
+            let version = parts[0];
+            let path = parts[1].trim_matches(|c| c == '[' || c == ']');
+            Some((version.to_string(), path.to_string()))
+        } else {
+            None
+        };
+        if sdk_version.is_none() {
+            return Err(format!("Unable to parse sdk info otput {}", stdout));
+        }
+
+        return Ok(sdk_version
             .map(|(version, base_path)| (format!("{}/{}", base_path, version), version))
             .unwrap());
     }
