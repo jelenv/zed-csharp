@@ -82,7 +82,7 @@ I'm using the preview version of Zed, but you don't have to.
 This extension is far from perfect. Here are a couple caveats:
 1. Windows support! I never tested this on Windows, only Linux and MacOS. I think the biggest problem are the custom bash commands this extension relies on. Adding Windows support should be doable though.
 2. The razor syntax highlighting is still a bit wonky. Especially the html syntax injection. My custom [tree-sitter fork](https://github.com/kevin-mueller/tree-sitter-razor) does solve some problems from the original one, but it should be mentioned that I have zero knowledge about tree sitter syntax. Improvements here would be very welcome!
-2. The official Roslyn LSP is very new. Occasionally, the server crashes and has to be restarted. That said, it works pretty well for large code bases and much more reliably than the other LSPs I've tried.
+2. The official Roslyn LSP is very new. Occasionally, the server crashes and has to be restarted. That said, it works pretty well for large code bases (~100 Projects) and much more reliably than the other LSPs I've tried.
 
 ---
 

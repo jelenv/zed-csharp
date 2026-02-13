@@ -229,7 +229,7 @@ impl zed::Extension for CsharpExtension {
             // for now we're deferring the build step to the run_dap_locator method (yes very ugly, I know. But it works.)
             // another alternative would be to build the entire solution here, but that can be annoying when not all projects are compiling
             //
-            let mut var_to_test = env_value(&_build_task.env, "DOTNET_FILE").unwrap();
+            let mut var_to_test = env_value(&_build_task.env, "DOTNET_FILE")?;
             var_to_test.remove(0);
             let args = vec![
                 "$ZED variables not resolved yet, deferring build step.".into(),
@@ -403,11 +403,7 @@ fn find_csproj(start_path: &str) -> Option<String> {
 }
 
 fn find_dll_from_csproj(start_path: &str) -> Option<String> {
-    let binary_name = start_path
-        .split("/")
-        .last()
-        .unwrap()
-        .strip_suffix(".csproj")?;
+    let binary_name = start_path.split("/").last()?.strip_suffix(".csproj")?;
 
     let folder_path = if let Some(last_slash) = start_path.rfind('/') {
         if last_slash == 0 {

@@ -44,7 +44,6 @@ path = "xml"
 [debug_adapters.netcoredbg]
 schema_path = "debug_adapter_schemas/netcoredbg.json"
 
-
 [debug_locators.csharp-project-runner]
 
 [[capabilities]]

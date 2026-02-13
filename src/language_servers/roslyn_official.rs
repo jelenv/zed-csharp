@@ -27,28 +27,35 @@ impl RoslynOfficial {
         // Build arguments list
         let mut args = vec!["--stdio".to_string(), "--autoLoadProjects".to_string()];
 
-        let lsp_user_settings = lsp_settings.settings.unwrap();
+        let no_settings_error_message = format!(
+            r#"
+            No settings configured for roslyn-official.
+            Please specify the razor_source_repository_root in your settings.json:
+            "lsp": {{
+              "roslyn-official": {{
+                "settings": {{
+                  "razor_source_repository_root": "/some/place/nice/razor"
+                }}
+              }}
+            }},
+            "#
+        );
+
+        let lsp_user_settings = match lsp_settings.settings {
+            Some(settings) => settings,
+            None => {
+                return Err(no_settings_error_message);
+            }
+        };
+
         let razor_root = lsp_user_settings["razor_source_repository_root"]
             .as_str()
             .map(|s| s.to_string());
-        if razor_root.is_none() {
-            return Err(format!(
-                r#"
-                Please specify the razor_source_repository_root in your settings.json
-                (the razor repository will be cloned there)
-                "lsp": {{
-                  "roslyn-official": {{
-                    "settings": {{
-                      ...
-                       "razor_source_repository_root": "/path/to/razor/repo"
-                      ...
-                    }}
-                  }}
-                }},
-                "#
-            ));
-        }
-        let razor_root_unwrapped = &razor_root.unwrap();
+
+        let razor_root_unwrapped = &match razor_root {
+            None => return Err(no_settings_error_message),
+            Some(x) => x,
+        };
 
         let (sdk_path, sdk_version) = Self::find_dotnet_sdk_path(worktree)?;
 
@@ -78,6 +85,10 @@ impl RoslynOfficial {
                 ));
             }
 
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
             let razor_root_git_pull = zed_extension_api::process::Command::new("git")
                 .arg("-C")
                 .arg(razor_root_unwrapped)
@@ -158,6 +169,10 @@ impl RoslynOfficial {
         // Try to find roslyn-language-server in PATH
         if let Some(path) = worktree.which("roslyn-language-server") {
             // try to update
+            zed_extension_api::set_language_server_installation_status(
+                _language_server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
             zed_extension_api::process::Command::new("dotnet")
                 .arg("tool")
                 .arg("update")
