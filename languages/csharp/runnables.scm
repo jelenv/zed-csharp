@@ -60,7 +60,7 @@
     body: (declaration_list
       (class_declaration
         name: (identifier) @run @csharp_class_name
-        (#match? @csharp_class_name "Test$"))))
+        (#match? @csharp_class_name "Tests?$"))))
   (#set! tag csharp-test-class)
 )
 
@@ -73,7 +73,7 @@
   (compilation_unit
     (class_declaration
       name: (identifier) @run @csharp_class_name
-      (#match? @csharp_class_name "Test$")))
+      (#match? @csharp_class_name "Tests?$")))
   (#set! tag csharp-test-class)
 )
 
