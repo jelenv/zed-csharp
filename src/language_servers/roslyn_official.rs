@@ -304,19 +304,7 @@ impl RoslynOfficial {
         let config_map = roslyn_config.as_object_mut().unwrap();
         if let zed::serde_json::Value::Object(settings_map) = settings {
             for (key, value) in settings_map {
-                if key.contains('|') {
-                    // This is already in the language|category format
-                    if let zed::serde_json::Value::Object(nested_settings) = value {
-                        for (nested_key, nested_value) in nested_settings {
-                            // The key already contains the proper format, just add the setting
-                            config_map.insert(format!("{key}.{nested_key}"), nested_value);
-                        }
-                    }
-                }
-                // Handle direct roslyn-format settings (fallback for any other format)
-                else if key.contains('.') {
-                    config_map.insert(key.clone(), value.clone());
-                }
+                config_map.insert(key.clone(), value.clone());
             }
         }
 
