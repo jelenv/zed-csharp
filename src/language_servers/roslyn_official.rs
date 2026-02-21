@@ -1,4 +1,4 @@
-use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
+use zed_extension_api::{self as zed, serde_json, settings::LspSettings, LanguageServerId, Result};
 
 pub struct RoslynOfficial {}
 
@@ -31,18 +31,27 @@ impl RoslynOfficial {
 
         // Try to find roslyn-language-server in PATH
         if let Some(path) = worktree.which("roslyn-language-server") {
-            // try to update
             zed_extension_api::set_language_server_installation_status(
                 language_server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
+                &zed::LanguageServerInstallationStatus::CheckingForUpdate,
             );
-            zed_extension_api::process::Command::new("dotnet")
-                .arg("tool")
-                .arg("update")
-                .arg("roslyn-language-server")
-                .arg("--global")
-                .arg("--prerelease")
-                .output()?;
+
+            let local_version = get_local_roslyn_version()?;
+
+            let latest_version = get_latest_online_roslyn_version()?;
+
+            if local_version != latest_version {
+                zed_extension_api::set_language_server_installation_status(
+                    language_server_id,
+                    &zed::LanguageServerInstallationStatus::Downloading,
+                );
+                update_roslyn_server()?;
+            }
+
+            zed_extension_api::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
 
             return Ok(zed::Command {
                 command: path,
@@ -50,18 +59,12 @@ impl RoslynOfficial {
                 env: Default::default(),
             });
         } else {
-            // download the tool
-            zed::set_language_server_installation_status(
+            zed_extension_api::set_language_server_installation_status(
                 language_server_id,
-                &zed_extension_api::LanguageServerInstallationStatus::Downloading,
+                &zed::LanguageServerInstallationStatus::Downloading,
             );
-            zed_extension_api::process::Command::new("dotnet")
-                .arg("tool")
-                .arg("install")
-                .arg("--global")
-                .arg("roslyn-language-server")
-                .arg("--prerelease")
-                .output()?;
+
+            download_roslyn_server()?;
 
             // check again
             if let Some(path) = worktree.which("roslyn-language-server") {
@@ -188,16 +191,12 @@ impl RoslynOfficial {
                     "Unable to reset razor git repository. Git installed?"
                 ));
             }
-
-            zed_extension_api::set_language_server_installation_status(
-                language_server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
-            );
             let razor_root_git_pull = zed_extension_api::process::Command::new("git")
                 .arg("-C")
                 .arg(razor_root_unwrapped)
                 .arg("pull")
                 .output()?;
+
             zed_extension_api::set_language_server_installation_status(
                 language_server_id,
                 &zed::LanguageServerInstallationStatus::None,
@@ -229,10 +228,6 @@ impl RoslynOfficial {
             }
         }
 
-        zed_extension_api::set_language_server_installation_status(
-            language_server_id,
-            &zed::LanguageServerInstallationStatus::Downloading,
-        );
         let dotnet_build = zed_extension_api::process::Command::new("dotnet")
             .arg("build")
             .arg(format!(
@@ -242,10 +237,6 @@ impl RoslynOfficial {
             .arg("--configuration").arg("Release")
             .envs(env_vars)
             .output()?;
-        zed_extension_api::set_language_server_installation_status(
-            language_server_id,
-            &zed::LanguageServerInstallationStatus::None,
-        );
 
         if dotnet_build.status.is_none() || dotnet_build.status.unwrap() != 0 {
             return Err(format!("Unable to build razor extension"));
@@ -310,4 +301,78 @@ impl RoslynOfficial {
 
         roslyn_config
     }
+}
+
+fn get_latest_online_roslyn_version() -> Result<String, String> {
+    let command_output = zed_extension_api::process::Command::new("dotnet")
+        .arg("tool")
+        .arg("search")
+        .arg("roslyn-language-server")
+        .arg("--prerelease")
+        .arg("--take")
+        .arg("1")
+        .arg("--detail")
+        .output()?;
+
+    let command_output_string = String::from_utf8_lossy(&command_output.stdout);
+
+    let version = command_output_string
+        .lines()
+        .find(|line| line.starts_with("Latest Version:"))
+        .and_then(|line| line.split(": ").last())
+        .ok_or("Unable to parse latest version from dotnet tool search output")?;
+
+    return Ok(version.into());
+}
+
+fn get_local_roslyn_version() -> Result<String, String> {
+    let command_output = zed_extension_api::process::Command::new("dotnet")
+        .arg("tool")
+        .arg("list")
+        .arg("roslyn-language-server")
+        .arg("--global")
+        .arg("--format")
+        .arg("json")
+        .output()?;
+
+    let json_string = String::from_utf8_lossy(&command_output.stdout);
+
+    let json =
+        serde_json::from_str::<serde_json::Value>(&json_string).map_err(|e| e.to_string())?;
+
+    let data = json
+        .get("data")
+        .ok_or("Unable to get data")?
+        .as_array()
+        .ok_or("Unable to get data as an array")?;
+
+    let version = data[0]
+        .get("version")
+        .ok_or("Unable to get version on data object")?
+        .as_str()
+        .ok_or("Unable to parse version")?;
+
+    return Ok(version.into());
+}
+
+fn download_roslyn_server() -> Result<(), String> {
+    zed_extension_api::process::Command::new("dotnet")
+        .arg("tool")
+        .arg("install")
+        .arg("--global")
+        .arg("roslyn-language-server")
+        .arg("--prerelease")
+        .output()?;
+    Ok(())
+}
+
+fn update_roslyn_server() -> Result<(), String> {
+    zed_extension_api::process::Command::new("dotnet")
+        .arg("tool")
+        .arg("update")
+        .arg("roslyn-language-server")
+        .arg("--global")
+        .arg("--prerelease")
+        .output()?;
+    Ok(())
 }
