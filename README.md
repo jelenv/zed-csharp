@@ -136,4 +136,4 @@ This is suboptimal, because the two will drift appart sooner or later.
 
 Please, feel free to contribute to this extension. My knowledge of rust and the zed internals is very limited, so some help would be much appreciated.
 
-To develop this extension, see the [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions) section of the Zed docs. t
+To develop this extension, see the [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions) section of the Zed docs.
