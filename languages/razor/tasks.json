@@ -1,0 +1,51 @@
+[
+  {
+    "label": "Open Project File",
+    "command": "zed-preview",
+    "args": [
+      "$(d=\"$ZED_FILE\"; while [[ \"$d\" != \"/\" ]]; do c=$(find \"$d\" -maxdepth 1 -name \"*.csproj\" -print -quit 2>/dev/null); [[ -n \"$c\" ]] && echo \"$c\" && break; d=$(dirname \"$d\"); done)"
+    ],
+    "reveal": "never",
+    "hide": "on_success",
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Build Project",
+    "command": "dotnet build $(d=\"$ZED_FILE\"; while [[ \"$d\" != \"/\" ]]; do c=$(find \"$d\" -maxdepth 1 -name \"*.csproj\" -print -quit 2>/dev/null); [[ -n \"$c\" ]] && echo \"$c\" && break; d=$(dirname \"$d\"); done)",
+    "reveal": "no_focus",
+    "hide": "never",
+    "env": {
+      "DOTNET_FILE": "$ZED_FILE"
+    },
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Run Project",
+    "command": "dotnet",
+    "args": [
+      "run",
+      "--project",
+      "$(d=\"$ZED_FILE\"; while [[ $d != / ]]; do c=$(find $d -maxdepth 1 -name '*.csproj' -print -quit 2>/dev/null); [[ -n $c ]] && echo $c && break; d=$(dirname $d); done)"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "env": {
+      "DOTNET_FILE": "$ZED_FILE"
+    },
+    "show_command": false,
+    "show_summary": false
+  },
+  {
+    "label": "Build Solution",
+    "command": "dotnet build",
+    "args": [
+      "$ZED_WORKTREE_ROOT"
+    ],
+    "reveal": "no_focus",
+    "hide": "never",
+    "show_command": false,
+    "show_summary": false
+  }
+]
