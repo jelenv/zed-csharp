@@ -74,7 +74,6 @@ I'm using the preview version of Zed, but you don't have to.
 ```jsonc
 {
   // improves the c# syntax highliting further
-  // As of 13.02.2026, the preview version of Zed is required!
   "semantic_tokens": "combined",
 }
 ```
