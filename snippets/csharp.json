@@ -35,10 +35,18 @@
   "C# for": {
     "prefix": "for",
     "body": [
-      "for (var ${2:i}; i < ${1:length}; ${3:${2:i}++})",
+      "for (var ${2:i} = 0; i < ${1:length}; ${3:${2:i}++})",
       "{",
       "   $0",
       "}"
+    ]
+  },
+  "C# summary comment": {
+    "prefix": "summary",
+    "body": [
+      "/// <summary>",
+      "/// $0",
+      "/// </summary>"
     ]
   }
 }
