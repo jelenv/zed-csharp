@@ -45,7 +45,7 @@ The original extension did not work when not connected to the internet. This has
 
 ## Setup
 
-First, clone this repositry and install it as a "Dev Extension" in Zed.
+First install https://rustup.rs. Then clone this repositry and install it as a "Dev Extension" in Zed.
 ```bash
 git clone https://github.com/kevin-mueller/zed-csharp
 ```
