@@ -296,7 +296,20 @@ impl zed::Extension for CsharpExtension {
                 .arg("Debug")
                 .output()?;
 
-            let dll_path = &find_dll_from_csproj(&csproj)?;
+            let dll_path_result = &find_dll_from_csproj_or_build_props(&csproj, None);
+            if dll_path_result.is_err() {}
+            let dll_path = match dll_path_result {
+                Err(_) => {
+                    // fallback with Directory.Build.Props
+                    let worktree_root = &env_value(&_build_task.env, "ZED_WORKTREE_ROOT")
+                        .ok_or("Unable to resolve worktree root from env var")?
+                        .to_string();
+                    let build_props_path = format!("{}/Directory.Build.Props", worktree_root);
+
+                    find_dll_from_csproj_or_build_props(&csproj, Some(&build_props_path))?
+                }
+                Ok(path) => path.to_string(),
+            };
 
             let mut args: Vec<String> = vec![];
 
@@ -400,22 +413,27 @@ fn find_csproj(start_path: &str) -> Option<String> {
     None // Not found
 }
 
-fn find_dll_from_csproj(csproj_path: &str) -> Result<String, String> {
-    let csproj_content_output = zed::Command::new("cat")
-        .arg(csproj_path)
+fn find_dll_from_csproj_or_build_props(
+    csproj_path: &str,
+    build_props_path: Option<&str>,
+) -> Result<String, String> {
+    let file_to_parse = build_props_path.unwrap_or(csproj_path);
+
+    let xml_output = zed::Command::new("cat")
+        .arg(file_to_parse)
         .output()
         .map_err(|e| e.to_string())?;
 
-    let csproj_content = String::from_utf8_lossy(&csproj_content_output.stdout)
+    let xml_content = String::from_utf8_lossy(&xml_output.stdout)
         .trim()
         .to_string();
 
-    let target_framework = match parse_target_framework(&csproj_content) {
+    let target_framework = match parse_target_framework(&xml_content) {
         Some(it) => it,
         None => {
             return Err(format!(
-                "Unable to parse target framework from csproj content {}",
-                csproj_content
+                "Unable to parse target framework from xml content {}",
+                xml_content
             ))
         }
     };
