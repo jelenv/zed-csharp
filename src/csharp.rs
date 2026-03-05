@@ -297,7 +297,6 @@ impl zed::Extension for CsharpExtension {
                 .output()?;
 
             let dll_path_result = &find_dll_from_csproj_or_build_props(&csproj, None);
-            if dll_path_result.is_err() {}
             let dll_path = match dll_path_result {
                 Err(_) => {
                     // fallback with Directory.Build.Props
