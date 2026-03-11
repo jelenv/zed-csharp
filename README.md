@@ -8,7 +8,7 @@ This extension provides a couple of additional features to the existing one:
 
 ### Debugger Support
 
-Integrates the great work from [zed-netcoredbg](https://github.com/qwadrox/zed-netcoredbg) and some parts of [@Tiggilyboo](https://github.com/Tiggilyboo)'s PR. Big thanks for both of your work. Without it, I would never have been able to build this.
+Integrates the great work from [zed-netcoredbg](https://github.com/qwadrox/zed-netcoredbg) and some parts of [@Tiggilyboo](https://github.com/Tiggilyboo)'s PR. Big thanks for both of your work!
 
 This even includes debugging support for tests. And the tests can even be started via a little ">" icon next to the test name! Crazy, right?
 
