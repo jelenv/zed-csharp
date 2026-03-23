@@ -33,20 +33,10 @@ impl RoslynOfficial {
         if let Some(path) = worktree.which("roslyn-language-server") {
             zed_extension_api::set_language_server_installation_status(
                 language_server_id,
-                &zed::LanguageServerInstallationStatus::CheckingForUpdate,
+                &zed::LanguageServerInstallationStatus::Downloading,
             );
 
-            let local_version = get_local_roslyn_version()?;
-
-            let latest_version = get_latest_online_roslyn_version()?;
-
-            if local_version != latest_version {
-                zed_extension_api::set_language_server_installation_status(
-                    language_server_id,
-                    &zed::LanguageServerInstallationStatus::Downloading,
-                );
-                update_roslyn_server()?;
-            }
+            update_roslyn_server()?;
 
             zed_extension_api::set_language_server_installation_status(
                 language_server_id,
@@ -303,58 +293,6 @@ impl RoslynOfficial {
     }
 }
 
-fn get_latest_online_roslyn_version() -> Result<String, String> {
-    let command_output = zed_extension_api::process::Command::new("dotnet")
-        .arg("tool")
-        .arg("search")
-        .arg("roslyn-language-server")
-        .arg("--prerelease")
-        .arg("--take")
-        .arg("1")
-        .arg("--detail")
-        .output()?;
-
-    let command_output_string = String::from_utf8_lossy(&command_output.stdout);
-
-    let version = command_output_string
-        .lines()
-        .find(|line| line.starts_with("Latest Version:"))
-        .and_then(|line| line.split(": ").last())
-        .ok_or("Unable to parse latest version from dotnet tool search output")?;
-
-    return Ok(version.into());
-}
-
-fn get_local_roslyn_version() -> Result<String, String> {
-    let command_output = zed_extension_api::process::Command::new("dotnet")
-        .arg("tool")
-        .arg("list")
-        .arg("roslyn-language-server")
-        .arg("--global")
-        .arg("--format")
-        .arg("json")
-        .output()?;
-
-    let json_string = String::from_utf8_lossy(&command_output.stdout);
-
-    let json =
-        serde_json::from_str::<serde_json::Value>(&json_string).map_err(|e| e.to_string())?;
-
-    let data = json
-        .get("data")
-        .ok_or("Unable to get data")?
-        .as_array()
-        .ok_or("Unable to get data as an array")?;
-
-    let version = data[0]
-        .get("version")
-        .ok_or("Unable to get version on data object")?
-        .as_str()
-        .ok_or("Unable to parse version")?;
-
-    return Ok(version.into());
-}
-
 fn download_roslyn_server() -> Result<(), String> {
     zed_extension_api::process::Command::new("dotnet")
         .arg("tool")
@@ -362,6 +300,8 @@ fn download_roslyn_server() -> Result<(), String> {
         .arg("--global")
         .arg("roslyn-language-server")
         .arg("--prerelease")
+        .arg("--source")
+        .arg("https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json")
         .output()?;
     Ok(())
 }
@@ -373,6 +313,8 @@ fn update_roslyn_server() -> Result<(), String> {
         .arg("roslyn-language-server")
         .arg("--global")
         .arg("--prerelease")
+        .arg("--source")
+        .arg("https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json")
         .output()?;
     Ok(())
 }
