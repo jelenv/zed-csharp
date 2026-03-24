@@ -157,26 +157,6 @@ impl RoslynOfficial {
     }
 
     fn find_dotnet_sdk_path(dotnet_env: Option<&EnvVars>) -> Result<(String, String), String> {
-        let mut version_command = with_optional_env(
-            zed_extension_api::process::Command::new("dotnet").arg("--version"),
-            dotnet_env,
-        );
-        let version_output = version_command.output()?;
-        if version_output.status != Some(0) {
-            return Err(format!(
-                "Unable to resolve active dotnet SDK version.\nstdout: {}\nstderr: {}",
-                String::from_utf8_lossy(&version_output.stdout),
-                String::from_utf8_lossy(&version_output.stderr)
-            ));
-        }
-
-        let sdk_version = String::from_utf8_lossy(&version_output.stdout)
-            .trim()
-            .to_string();
-        if sdk_version.is_empty() {
-            return Err("dotnet --version returned empty output".to_string());
-        }
-
         let mut sdk_list_command = with_optional_env(
             zed_extension_api::process::Command::new("dotnet").arg("--list-sdks"),
             dotnet_env,
@@ -191,29 +171,32 @@ impl RoslynOfficial {
         }
 
         let stdout = String::from_utf8_lossy(&sdks_output.stdout);
-        let sdk_base_path = stdout.lines().find_map(|line| {
-            let listed_version = line.split_whitespace().next()?;
-            if listed_version != sdk_version {
-                return None;
-            }
+        let installed_sdks = stdout
+            .lines()
+            .filter_map(|line| {
+                let version = line.split_whitespace().next()?;
+                let start = line.find('[')? + 1;
+                let end = line.rfind(']')?;
+                Some((version.to_string(), line[start..end].to_string()))
+            })
+            .collect::<Vec<_>>();
 
-            let start = line.find('[')? + 1;
-            let end = line.rfind(']')?;
-            Some(line[start..end].to_string())
-        });
-
-        let Some(sdk_base_path) = sdk_base_path else {
+        if installed_sdks.is_empty() {
             return Err(format!(
-                "Unable to locate SDK path for active version {}.\nlist-sdks output: {}",
-                sdk_version, stdout
+                "Unable to parse installed dotnet SDKs from output: {}",
+                stdout
             ));
-        };
+        }
+
+        let (sdk_version, sdk_base_path) = installed_sdks
+            .last()
+            .expect("installed_sdks is non-empty after explicit guard");
 
         let sdk_path = std::path::Path::new(&sdk_base_path)
-            .join(&sdk_version)
+            .join(sdk_version)
             .to_string_lossy()
             .to_string();
-        Ok((sdk_path, sdk_version))
+        Ok((sdk_path, sdk_version.clone()))
     }
 
     // Find the Razor Compiler DLL in the given SDK path
